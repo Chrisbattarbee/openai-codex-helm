@@ -24,6 +24,8 @@ kubectl exec -it deploy/codex-openai-codex -c codex -- sh
 codex
 ```
 
+> 📖 For a more detailed installation guide, see [Running OpenAI Codex in Kubernetes](https://metoro.io/blog/openai-codex-kubernetes).
+
 ---
 
 ## Prerequisites
