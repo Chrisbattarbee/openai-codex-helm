@@ -2,7 +2,7 @@ apiVersion: v2
 name: openai-codex
 description: A Helm chart for running Codex CLI in Kubernetes with persistent HOME storage
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "latest"
 keywords:
   - codex
