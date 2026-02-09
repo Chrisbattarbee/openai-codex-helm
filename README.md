@@ -13,9 +13,7 @@ A Helm chart for running [Codex CLI](https://github.com/openai/codex) in Kuberne
 ```bash
 helm repo add openai-codex https://chrisbattarbee.github.io/openai-codex-helm
 helm repo update
-helm install codex openai-codex/openai-codex \
-  --set image.repository=<your-codex-image> \
-  --set image.tag=<your-tag>
+helm install codex openai-codex/openai-codex
 ```
 
 Wait for the pod and open a shell:
