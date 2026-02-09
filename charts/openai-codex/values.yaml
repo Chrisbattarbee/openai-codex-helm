@@ -8,9 +8,9 @@ fullnameOverride: ""
 # Image configuration
 image:
   # -- Container image repository. This image must already contain the `codex` binary.
-  repository: codex
-  # -- Container image tag
-  tag: "latest"
+  repository: ghcr.io/chrisbattarbee/openai-codex
+  # -- Container image tag. Pin this to an explicit Codex version tag.
+  tag: "0.98.0"
   # -- Image pull policy
   pullPolicy: IfNotPresent
 

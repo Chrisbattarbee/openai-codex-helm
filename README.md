@@ -30,9 +30,9 @@ codex
 
 - Kubernetes 1.19+
 - Helm 3.0+
-- A **prebuilt container image** that already includes the `codex` binary
+- Docker (if you want to build/publish your own image)
 
-> The chart does not install Codex at startup. It expects `image.repository:image.tag` to be ready-to-run.
+> The chart does not install Codex at startup. It expects `image.repository:image.tag` to be ready-to-run (defaults to `ghcr.io/chrisbattarbee/openai-codex:0.98.0`).
 
 ---
 
@@ -90,12 +90,33 @@ helm install codex openai-codex/openai-codex \
 
 ---
 
+## Image Publishing
+
+This repository includes a multi-arch image workflow at [`.github/workflows/build-image.yaml`](.github/workflows/build-image.yaml).
+
+- Push to `main` publishes:
+  - `ghcr.io/chrisbattarbee/openai-codex:latest`
+  - `ghcr.io/chrisbattarbee/openai-codex:sha-<shortsha>`
+- Push a tag named `codex-X.Y.Z` publishes:
+  - `ghcr.io/chrisbattarbee/openai-codex:X.Y.Z`
+  - `ghcr.io/chrisbattarbee/openai-codex:latest`
+- Images are built for both `linux/amd64` and `linux/arm64`.
+
+Codex version baked into the image is controlled by the workflow:
+
+- `main` builds install `@openai/codex@latest`
+- `codex-X.Y.Z` tag builds install `@openai/codex@X.Y.Z`
+
+For reproducibility, Helm defaults should point to explicit version tags rather than `latest`.
+
+---
+
 ## Key Values
 
 | Parameter                   | Description                                         | Default        |
 | --------------------------- | --------------------------------------------------- | -------------- |
-| `image.repository`          | Prebuilt image containing `codex`                   | `codex`        |
-| `image.tag`                 | Image tag                                           | `latest`       |
+| `image.repository`          | Prebuilt image containing `codex`                   | `ghcr.io/chrisbattarbee/openai-codex` |
+| `image.tag`                 | Image tag                                           | `0.98.0`       |
 | `command`                   | Container command (idle by default)                 | `sh -lc sleep infinity` |
 | `credentials.existingSecret`| Existing secret for env vars                        | `""`           |
 | `credentials.openaiApiKey`  | API key for chart-managed secret                    | `""`           |

@@ -1,0 +1,111 @@
+name: Build and Publish Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "codex-*"
+  workflow_dispatch:
+    inputs:
+      codex_version:
+        description: "Codex npm version to install (for example 0.98.0 or latest)"
+        required: false
+        default: latest
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/openai-codex"
+          short_sha="$(printf '%s' "$GITHUB_SHA" | cut -c1-7)"
+          codex_version="latest"
+          primary_tag=""
+          tags=()
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            ref_name="${GITHUB_REF_NAME}"
+            codex_version="${ref_name#codex-}"
+            if [[ "$codex_version" == "$ref_name" ]]; then
+              echo "Expected tag format codex-X.Y.Z, got: $ref_name" >&2
+              exit 1
+            fi
+            tags+=("${image}:${codex_version}")
+            tags+=("${image}:latest")
+            primary_tag="${image}:${codex_version}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            input_version="${{ inputs.codex_version }}"
+            if [[ -n "$input_version" ]]; then
+              codex_version="$input_version"
+            fi
+            if [[ "$codex_version" == "latest" ]]; then
+              tags+=("${image}:latest")
+              tags+=("${image}:sha-${short_sha}")
+              primary_tag="${image}:latest"
+            else
+              tags+=("${image}:${codex_version}")
+              tags+=("${image}:latest")
+              primary_tag="${image}:${codex_version}"
+            fi
+          else
+            tags+=("${image}:latest")
+            tags+=("${image}:sha-${short_sha}")
+            primary_tag="${image}:latest"
+          fi
+
+          {
+            echo "image=${image}"
+            echo "codex_version=${codex_version}"
+            echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "primary_tag=${primary_tag}"
+            echo "tags<<EOF"
+            for tag in "${tags[@]}"; do
+              echo "${tag}"
+            done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push multi-arch image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            CODEX_VERSION=${{ steps.meta.outputs.codex_version }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Verify published manifest contains amd64 and arm64
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect "${{ steps.meta.outputs.primary_tag }}" > /tmp/imagetools.txt
+          grep -q "linux/amd64" /tmp/imagetools.txt
+          grep -q "linux/arm64" /tmp/imagetools.txt
