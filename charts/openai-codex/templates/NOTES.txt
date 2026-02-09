@@ -1,0 +1,15 @@
+OpenAI Codex has been deployed!
+
+Wait for the pod to be ready:
+
+  kubectl wait --namespace {{ .Release.Namespace }} --for=condition=ready pod -l app.kubernetes.io/name={{ include "openai-codex.name" . }},app.kubernetes.io/instance={{ .Release.Name }} --timeout=120s
+
+Open a shell in the pod:
+
+  kubectl exec -it --namespace {{ .Release.Namespace }} deploy/{{ include "openai-codex.fullname" . }} -c codex -- sh
+
+Run Codex:
+
+  codex
+
+The pod mounts /home/node from a PVC by default, so login state and ~/.codex persist across pod restarts.
